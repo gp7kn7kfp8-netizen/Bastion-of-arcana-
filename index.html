@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bastion of the Arcana</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; -webkit-user-select: none; }
+        body { background: #070a14; color: #f3f4f6; overflow: hidden; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+
+        #app { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; }
+
+        /* Top Header / Resource Bar */
+        #header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-bottom: 2px solid #3b82f6;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .res-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .res-item { display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 0.85rem; background: rgba(15, 23, 42, 0.8); padding: 4px 8px; border-radius: 6px; border: 1px solid #334155; color: #e2e8f0; }
+        .res-icon { font-size: 0.95rem; }
+        #auth-btn { background: linear-gradient(135deg, #4f46e5, #4338ca); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; box-shadow: 0 2px 5px rgba(79, 70, 229, 0.4); }
+        #auth-btn:hover { background: #4338ca; }
+
+        /* Viewport Container */
+        #viewport { flex: 1; position: relative; overflow: hidden; background: #090d16; display: flex; flex-direction: column; }
+        .view-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; overflow-y: auto; padding: 15px; padding-bottom: 85px; }
+        .view-screen.active { display: flex; }
+
+        /* Bottom Navigation Bar */
+        #nav-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 65px;
+            background: linear-gradient(135deg, #0f172a 0%, #090d16 100%);
+            border-top: 2px solid #1e293b;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            flex: 1;
+            font-size: 0.72rem;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .nav-btn.active { color: #60a5fa; text-shadow: 0 0 10px rgba(96, 165, 250, 0.4); }
+        .nav-icon { font-size: 1.25rem; }
+
+        /* Home View (Defend Realm) */
+        #home-view { align-items: center; justify-content: flex-start; gap: 12px; }
+        .citadel-banner {
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+        }
+        .citadel-banner h2 { font-size: 1.15rem; color: #60a5fa; margin-bottom: 4px; font-weight: 700; }
+        .citadel-banner p { font-size: 0.85rem; color: #94a3b8; }
+
+        #arena-container {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            border: 3px solid #3b82f6;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.5);
+        }
+        canvas { width: 100%; height: 100%; display: block; }
+
+        .action-btns { display: flex; gap: 10px; width: 100%; max-width: 400px; }
+        .btn-main {
+            flex: 1;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+        }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-secondary {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            color: white;
+            border: none;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
+        }
+        .btn-citadel {
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
+        }
+
+        .panel-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 15px; color: #60a5fa; border-bottom: 2px solid #1e293b; padding-bottom: 8px; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+        .card-item {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+            text-align: center;
+        }
+        .card-item.unlocked { border-color: #3b82f6; background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(59, 130, 246, 0.1)); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.15); }
+        .card-item h4 { font-size: 0.9rem; color: #f8fafc; }
+        .card-item p { font-size: 0.75rem; color: #94a3b8; }
+
+        .upgrade-list { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 500px; margin: 0 auto; }
+        .upgrade-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .upgrade-info h4 { font-size: 0.95rem; color: #f8fafc; }
+        .upgrade-info p { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+        .upgrade-btn {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+        }
+        .upgrade-btn:hover { background: #047857; }
+
+        /* Store View (Coming Soon) */
+        .store-grid { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 500px; margin: 0 auto; width: 100%; }
+        .store-item {
+            background: #1e293b;
+            border: 2px dashed #475569;
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            opacity: 0.85;
+        }
+        .store-item-info h4 { font-size: 0.95rem; color: #e2e8f0; }
+        .store-item-info p { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+        .store-badge {
+            background: #0f172a;
+            color: #cbd5e1;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            border: 1px solid #334155;
+            white-space: nowrap;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-content {
+            background: #1e293b;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            max-width: 450px;
+            max-height: 85vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { color: #60a5fa; font-size: 1.2rem; }
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.85rem; color: #94a3b8; }
+        .form-input { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px; color: white; font-size: 0.95rem; user-select: text; -webkit-user-select: text; }
+        .save-actions { display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid #334155; padding-top: 12px; margin-top: 4px; }
+        .btn-util { flex: 1; background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+        .btn-danger { background: #991b1b; border-color: #b91c1c; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header Bar -->
+        <div id="header">
+            <div class="res-group">
+                <div class="res-item"><span class="res-icon">🪙</span><span id="res-gold">150</span></div>
+                <div class="res-item"><span class="res-icon">💎</span><span id="res-gems">120</span></div>
+                <div class="res-item"><span class="res-icon">🧪</span><span id="res-ores">25</span></div>
+                <div class="res-item"><span class="res-icon">⚡</span><span id="res-stones">5</span></div>
+            </div>
+            <button id="auth-btn" onclick="openAuthModal()">Save / Sync</button>
+        </div>
+
+        <!-- Viewport -->
+        <div id="viewport">
+            <!-- Home / Defend View -->
+            <div id="home-view" class="view-screen active">
+                <div class="citadel-banner">
+                    <h2 id="citadel-title">Tier 1: Wooden Outpost</h2>
+                    <p id="citadel-bonus">Base Coin Bonus: +0% | Wave: <span id="wave-num">1</span></p>
+                </div>
+                <div id="arena-container">
+                    <canvas id="gameCanvas"></canvas>
+                </div>
+                <div class="action-btns">
+                    <button class="btn-main" id="wave-btn" onclick="toggleWave()">Start Wave</button>
+                    <button class="btn-secondary" id="ad-gem-btn" onclick="claimAdGem()">Free Gems (+25 💎)</button>
+                </div>
+                <button class="btn-citadel" id="citadel-up-btn" onclick="upgradeCitadel()">Upgrade Citadel (500 🪙)</button>
+            </div>
+
+            <!-- Workshop View -->
+            <div id="workshop-view" class="view-screen">
+                <div class="panel-title">Citadel Workshop</div>
+                <div class="upgrade-list" id="workshop-list"></div>
+            </div>
+
+            <!-- Cards View -->
+            <div id="cards-view" class="view-screen">
+                <div class="panel-title">Arcane Cards (21 Deck)</div>
+                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <p style="font-size: 0.85rem; color: #94a3b8;">Collect and upgrade D&D modifiers.</p>
+                    <button class="upgrade-btn" onclick="pullCards(10)">Pull 10 (100 💎)</button>
+                </div>
+                <div class="card-grid" id="cards-grid"></div>
+            </div>
+
+            <!-- Ultimate Weapons View -->
+            <div id="weapons-view" class="view-screen">
+                <div class="panel-title">Ultimate Weapons</div>
+                <div class="upgrade-list" id="weapons-list"></div>
+            </div>
+
+            <!-- Store View (Coming Soon) -->
+            <div id="store-view" class="view-screen">
+                <div class="panel-title">Arcane Store</div>
+                <div class="store-grid">
+                    <div class="store-item">
+                        <div class="store-item-info">
+                            <h4>1.5x Coin No Ads Pack + 500 Gems</h4>
+                            <p>Permanent multiplier & currency bundle</p>
+                        </div>
+                        <div class="store-badge">£5.00 (Coming Soon)</div>
+                    </div>
+                    <div class="store-item">
+                        <div class="store-item-info">
+                            <h4>2x Coin Pack Rare + 1000 Gems</h4>
+                            <p>Enhanced earnings & gems</p>
+                        </div>
+                        <div class="store-badge">£10.00 (Coming Soon)</div>
+                    </div>
+                    <div class="store-item">
+                        <div class="store-item-info">
+                            <h4>3x Coin Epic Pack + 5000 Gems</h4>
+                            <p>Ultimate multiplier boost</p>
+                        </div>
+                        <div class="store-badge">£20.00 (Coming Soon)</div>
+                    </div>
+                    <div class="store-item">
+                        <div class="store-item-info">
+                            <h4>500 Gem Pack</h4>
+                            <p>Instant pull currency</p>
+                        </div>
+                        <div class="store-badge">£2.00 (Coming Soon)</div>
+                    </div>
+                    <div class="store-item">
+                        <div class="store-item-info">
+                            <h4>1000 Gem Pack</h4>
+                            <p>Standard gem pouch</p>
+                        </div>
+                        <div class="store-badge">£5.00 (Coming Soon)</div>
+                    </div>
+                    <div class="store-item">
+                        <div class="store-item-info">
+                            <h4>3000 Gem Pack</h4>
+                            <p>Large gem chest</p>
+                        </div>
+                        <div class="store-badge">£10.00 (Coming Soon)</div>
+                    </div>
+                    <div class="store-item">
+                        <div class="store-item-info">
+                            <h4>Power Stones Pack (750 Stones)</h4>
+                            <p>Milestone upgrade stones</p>
+                        </div>
+                        <div class="store-badge">£25.00 (Coming Soon)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <div id="nav-bar">
+            <button class="nav-btn active" onclick="switchTab('home', this)"><span class="nav-icon">🏰</span>Defend</button>
+            <button class="nav-btn" onclick="switchTab('workshop', this)"><span class="nav-icon">🛠️</span>Workshop</button>
+            <button class="nav-btn" onclick="switchTab('cards', this)"><span class="nav-icon">🃏</span>Cards</button>
+            <button class="nav-btn" onclick="switchTab('weapons', this)"><span class="nav-icon">⚔️</span>Weapons</button>
+            <button class="nav-btn" onclick="switchTab('store', this)"><span class="nav-icon">🛒</span>Store</button>
+        </div>
+    </div>
+
+    <!-- Auth / Save Modal -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Save Data & Account</h3>
+                <button class="close-btn" onclick="closeAuthModal()">&times;</button>
+            </div>
+            <p id="save-indicator" style="font-size: 0.8rem; color: #94a3b8;">Auto-save active on this device.</p>
+            <div class="form-group">
+                <label>Email Address (Profile ID)</label>
+                <input type="email" id="auth-email" class="form-input" placeholder="hero@arcana.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="auth-password" class="form-input" placeholder="••••••••">
+            </div>
+            <button class="btn-main" onclick="handleLogin()">Login / Sync Profile</button>
+            <p id="auth-status" style="font-size: 0.8rem; color: #34d399; text-align: center;"></p>
+            <div class="save-actions">
+                <button class="btn-util" onclick="manualSave()">Force Save</button>
+                <button class="btn-util" onclick="exportSave()">Export Backup</button>
+                <button class="btn-util btn-danger" onclick="resetSave()">Reset Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 10-Card Pull Modal -->
+    <div id="pull-modal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <div class="modal-header">
+                <h3>Arcane Summoning</h3>
+                <button class="close-btn" onclick="closePullModal()">&times;</button>
+            </div>
+            <p style="font-size: 0.85rem; color: #94a3b8;">You summoned 10 Arcane Cards!</p>
+            <div class="card-grid" id="pulled-cards-grid" style="margin-top: 10px;"></div>
+            <button class="btn-main" onclick="closePullModal()" style="margin-top: 10px;">Awesome</button>
+        </div>
+    </div>
+
+    <script>
+        const SAVE_KEY = 'bastion_arcana_save_v2';
+
+        const defaultState = {
+            gold: 150,
+            gems: 120,
+            ores: 25,
+            stones: 5,
+            wave: 1,
+            citadelTier: 1,
+            citadelCost: 500,
+            adGemUnlockTime: 0,
+            upgrades: {
+                health: { level: 1, cost: 50 },
+                regen: { level: 1, cost: 75 },
+                damage: { level: 1, cost: 60 },
+                crit: { level: 1, cost: 100 },
+                range: { level: 1, cost: 80 }
+            },
+            cards: Array.from({length: 21}, (_, i) => ({ id: i, name: `Arcane Relic #${i+1}`, unlocked: i < 3, level: 1 })),
+            weapons: [
+                { id: 0, name: 'Meteor Swarm', cost: 50, cooldown: 30, level: 0 },
+                { id: 1, name: 'Time Stop', cost: 100, cooldown: 45, level: 0 },
+                { id: 2, name: 'Divine Intervention', cost: 200, cooldown: 60, level: 0 },
+                { id: 3, name: 'Arcane Singularity', cost: 350, cooldown: 90, level: 0 },
+                { id: 4, name: 'Chain Lightning', cost: 500, cooldown: 40, level: 0 },
+                { id: 5, name: 'Realm Collapse', cost: 1000, cooldown: 120, level: 0 }
+            ],
+            user: null,
+            lastSaved: null
+        };
+
+        let state = JSON.parse(JSON.stringify(defaultState));
+
+        function saveGame() {
+            try {
+                state.lastSaved = Date.now();
+                const storageKey = state.user ? `${SAVE_KEY}_${state.user.toLowerCase().trim()}` : SAVE_KEY;
+                localStorage.setItem(storageKey, JSON.stringify(state));
+                localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+                const indicator = document.getElementById('save-indicator');
+                if (indicator) {
+                    indicator.innerText = `Last saved: ${new Date(state.lastSaved).toLocaleTimeString()}`;
+                }
+            } catch (e) {
+                console.warn('Storage save failed:', e);
+            }
+        }
+
+        function loadGame(emailKey = null) {
+            try {
+                const targetKey = emailKey ? `${SAVE_KEY}_${emailKey.toLowerCase().trim()}` : SAVE_KEY;
+                const raw = localStorage.getItem(targetKey);
+                if (!raw) return false;
+                const parsed = JSON.parse(raw);
+
+                state = {
+                    ...JSON.parse(JSON.stringify(defaultState)),
+                    ...parsed,
+                    upgrades: {
+                        ...JSON.parse(JSON.stringify(defaultState.upgrades)),
+                        ...(parsed.upgrades || {})
+                    }
+                };
+                if (Array.isArray(parsed.cards) && parsed.cards.length === 21) {
+                    state.cards = parsed.cards;
+                }
+                if (Array.isArray(parsed.weapons) && parsed.weapons.length === 6) {
+                    state.weapons = parsed.weapons;
+                }
+                return true;
+            } catch (e) {
+                console.warn('Storage load failed:', e);
+                return false;
+            }
+        }
+
+        function manualSave() {
+            saveGame();
+            document.getElementById('auth-status').innerText = 'Progress saved to browser storage!';
+        }
+
+        function exportSave() {
+            saveGame();
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bastion-of-the-arcana-save.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            document.getElementById('auth-status').innerText = 'Save backup downloaded!';
+        }
+
+        function resetSave() {
+            if (confirm('Reset all progress back to Tier 1?')) {
+                localStorage.removeItem(SAVE_KEY);
+                if (state.user) {
+                    localStorage.removeItem(`${SAVE_KEY}_${state.user.toLowerCase().trim()}`);
+                }
+                state = JSON.parse(JSON.stringify(defaultState));
+                saveGame();
+                updateUI();
+                document.getElementById('auth-status').innerText = 'Save reset to default.';
+            }
+        }
+
+        const citadelTiers = [
+            { name: "Tier 1: Wooden Outpost", bonus: 0 },
+            { name: "Tier 2: Stone Bastion", bonus: 15 },
+            { name: "Tier 3: Iron Citadel", bonus: 35 },
+            { name: "Tier 4: Mithril Stronghold", bonus: 60 },
+            { name: "Tier 5: Adamant Tower", bonus: 100 },
+            { name: "Tier 6: Celestial Spire", bonus: 150 },
+            { name: "Tier 7: Nether Keep", bonus: 220 },
+            { name: "Tier 8: Astral Sanctum", bonus: 300 },
+            { name: "Tier 9: Ethereal Pinnacle", bonus: 400 },
+            { name: "Tier 10: Omnipotent Throne", bonus: 600 }
+        ];
+
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.view-screen').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId + '-view').classList.add('active');
+            if(btnElement) btnElement.classList.add('active');
+        }
+
+        function getRemainingAdSeconds() {
+            if (!state.adGemUnlockTime) return 0;
+            const diff = Math.ceil((state.adGemUnlockTime - Date.now()) / 1000);
+            return diff > 0 ? diff : 0;
+        }
+
+        function updateUI() {
+            document.getElementById('res-gold').innerText = Math.floor(state.gold);
+            document.getElementById('res-gems').innerText = state.gems;
+            document.getElementById('res-ores').innerText = state.ores;
+            document.getElementById('res-stones').innerText = state.stones;
+
+            const currentCitadel = citadelTiers[state.citadelTier - 1] || citadelTiers[0];
+            document.getElementById('citadel-title').innerText = currentCitadel.name;
+            document.getElementById('citadel-bonus').innerHTML = `Base Coin Bonus: +${currentCitadel.bonus}% | Wave: <span id="wave-num">${state.wave}</span>`;
+
+            const citBtn = document.getElementById('citadel-up-btn');
+            if (state.citadelTier >= 10) {
+                citBtn.innerText = 'Citadel Maxed (Tier 10)';
+                citBtn.style.opacity = '0.6';
+            } else {
+                citBtn.innerText = `Upgrade Citadel (${state.citadelCost} 🪙)`;
+                citBtn.style.opacity = '1';
+            }
+
+            const workshopList = document.getElementById('workshop-list');
+            const ups = [
+                { key: 'health', name: 'Tower Health', desc: 'Increases fortress structural integrity.' },
+                { key: 'regen', name: 'Health Regeneration', desc: 'Restores HP per second automatically.' },
+                { key: 'damage', name: 'Spell Damage', desc: 'Increases offensive blast potency.' },
+                { key: 'crit', name: 'Critical Strike', desc: 'Chance to deal massive critical hits.' },
+                { key: 'range', name: 'Attack Range', desc: 'Extends target acquisition radius.' }
+            ];
+            workshopList.innerHTML = ups.map(u => `
+                <div class="upgrade-card">
+                    <div class="upgrade-info">
+                        <h4>${u.name} (Lvl ${state.upgrades[u.key].level})</h4>
+                        <p>${u.desc}</p>
+                    </div>
+                    <button class="upgrade-btn" onclick="buyUpgrade('${u.key}')">${state.upgrades[u.key].cost} 🪙</button>
+                </div>
+            `).join('');
+
+            const cardsGrid = document.getElementById('cards-grid');
+            cardsGrid.innerHTML = state.cards.map(c => `
+                <div class="card-item ${c.unlocked ? 'unlocked' : ''}">
+                    <h4>${c.name}</h4>
+                    <p>${c.unlocked ? 'Level ' + c.level : 'Locked'}</p>
+                </div>
+            `).join('');
+
+            const weaponsList = document.getElementById('weapons-list');
+            weaponsList.innerHTML = state.weapons.map(w => `
+                <div class="upgrade-card">
+                    <div class="upgrade-info">
+                        <h4>${w.name} (Lvl ${w.level})</h4>
+                        <p>Cooldown: ${w.cooldown}s</p>
+                    </div>
+                    <button class="upgrade-btn" onclick="buyWeapon(${w.id})">${w.cost} ⚡</button>
+                </div>
+            `).join('');
+
+            if (state.user) {
+                document.getElementById('auth-btn').innerText = state.user.split('@')[0];
+            }
+
+            updateAdButton();
+        }
+
+        function updateAdButton() {
+            const adBtn = document.getElementById('ad-gem-btn');
+            const rem = getRemainingAdSeconds();
+            if(rem > 0) {
+                const mins = Math.floor(rem / 60);
+                const secs = rem % 60;
+                adBtn.innerText = `Cooldown (${mins}:${secs < 10 ? '0' : ''}${secs})`;
+                adBtn.style.opacity = '0.5';
+            } else {
+                adBtn.innerText = `Free Gems (+25 💎)`;
+                adBtn.style.opacity = '1';
+            }
+        }
+
+        function upgradeCitadel() {
+            if (state.citadelTier < 10 && state.gold >= state.citadelCost) {
+                state.gold -= state.citadelCost;
+                state.citadelTier++;
+                state.citadelCost = Math.floor(state.citadelCost * 2.2);
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function buyUpgrade(key) {
+            const up = state.upgrades[key];
+            if(state.gold >= up.cost) {
+                state.gold -= up.cost;
+                up.level++;
+                up.cost = Math.floor(up.cost * 1.35);
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function buyWeapon(id) {
+            const w = state.weapons[id];
+            if(state.stones >= w.cost) {
+                state.stones -= w.cost;
+                w.level++;
+                w.cost = Math.floor(w.cost * 1.5);
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function pullCards(count) {
+            if(state.gems >= 100) {
+                state.gems -= 100;
+                let pulled = [];
+                for(let i=0; i<count; i++) {
+                    let randCard = state.cards[Math.floor(Math.random() * state.cards.length)];
+                    randCard.unlocked = true;
+                    randCard.level++;
+                    pulled.push(randCard);
+                }
+                saveGame();
+                updateUI();
+                showPullModal(pulled);
+            } else {
+                alert('Not enough gems!');
+            }
+        }
+
+        function showPullModal(pulledCards) {
+            const grid = document.getElementById('pulled-cards-grid');
+            grid.innerHTML = pulledCards.map(c => `
+                <div class="card-item unlocked">
+                    <h4>${c.name}</h4>
+                    <p>Lvl ${c.level}</p>
+                </div>
+            `).join('');
+            document.getElementById('pull-modal').style.display = 'flex';
+        }
+
+        function closePullModal() {
+            document.getElementById('pull-modal').style.display = 'none';
+        }
+
+        function claimAdGem() {
+            if(getRemainingAdSeconds() <= 0) {
+                state.gems += 25;
+                state.adGemUnlockTime = Date.now() + (600 * 1000);
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function openAuthModal() {
+            if (state.user) {
+                document.getElementById('auth-email').value = state.user;
+            }
+            document.getElementById('auth-status').innerText = '';
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+        function closeAuthModal() { document.getElementById('auth-modal').style.display = 'none'; }
+        function handleLogin() {
+            const email = document.getElementById('auth-email').value.trim();
+            if(email && email.includes('@')) {
+                const loadedExisting = loadGame(email);
+                state.user = email;
+                saveGame();
+                updateUI();
+                document.getElementById('auth-status').innerText = loadedExisting
+                    ? 'Existing profile save loaded & synced!'
+                    : 'New profile created & synced!';
+                setTimeout(() => closeAuthModal(), 1200);
+            } else {
+                alert('Please enter a valid email address.');
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let waveActive = false;
+        let enemies = [];
+        let projectiles = [];
+        let attackTimer = 0;
+
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function toggleWave() {
+            if (waveActive) return;
+            waveActive = true;
+            const count = 5 + Math.min(state.wave, 15);
+            const baseHp = 30 + (state.wave * 12);
+            for(let i=0; i<count; i++) {
+                enemies.push({
+                    x: canvas.width + i * 38,
+                    y: canvas.height / 2 + (Math.random() * 80 - 40),
+                    hp: baseHp,
+                    maxHp: baseHp,
+                    speed: 1.2 + Math.min(state.wave * 0.05, 1.5)
+                });
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+
+            const towerX = 40;
+            const towerY = canvas.height / 2;
+            const rangeRadius = 110 + (state.upgrades.range.level * 14);
+
+            // Range ring
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.22)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(towerX, towerY, rangeRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Citadel Base
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(20, towerY - 25, 40, 50);
+
+            if(waveActive) {
+                attackTimer++;
+                if (attackTimer >= 24 && enemies.length > 0) {
+                    const target = enemies.find(e => Math.hypot(e.x - towerX, e.y - towerY) <= rangeRadius);
+                    if (target) {
+                        attackTimer = 0;
+                        const isCrit = Math.random() < Math.min(0.05 + state.upgrades.crit.level * 0.03, 0.75);
+                        const dmg = (15 + state.upgrades.damage.level * 8) * (isCrit ? 2.5 : 1);
+                        projectiles.push({ x: towerX + 15, y: towerY, target, dmg, isCrit });
+                    }
+                }
+
+                for (let i = projectiles.length - 1; i >= 0; i--) {
+                    const p = projectiles[i];
+                    const dx = p.target.x - p.x;
+                    const dy = p.target.y - p.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < 10 || p.target.hp <= 0) {
+                        p.target.hp -= p.dmg;
+                        projectiles.splice(i, 1);
+                    } else {
+                        p.x += (dx / dist) * 7;
+                        p.y += (dy / dist) * 7;
+                        ctx.fillStyle = p.isCrit ? '#facc15' : '#38bdf8';
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.isCrit ? 5 : 3.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                for (let index = enemies.length - 1; index >= 0; index--) {
+                    const e = enemies[index];
+                    e.x -= e.speed;
+
+                    if (e.hp <= 0) {
+                        const bonusMult = 1 + ((citadelTiers[state.citadelTier - 1]?.bonus || 0) / 100);
+                        state.gold += Math.round((10 + state.wave * 2) * bonusMult);
+                        enemies.splice(index, 1);
+                        document.getElementById('res-gold').innerText = Math.floor(state.gold);
+                        continue;
+                    }
+
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(e.x, e.y, 8, 0, Math.PI*2);
+                    ctx.fill();
+
+                    if(e.x <= 60) {
+                        enemies.splice(index, 1);
+                        state.gold += 5;
+                        document.getElementById('res-gold').innerText = Math.floor(state.gold);
+                    }
+                }
+
+                if(enemies.length === 0) {
+                    waveActive = false;
+                    projectiles = [];
+                    state.wave++;
+                    if (state.wave % 5 === 0) state.stones += 2;
+                    saveGame();
+                    updateUI();
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        loadGame();
+        updateUI();
+
+        window.addEventListener('beforeunload', saveGame);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') saveGame();
+        });
+        setInterval(() => {
+            updateAdButton();
+            saveGame();
+        }, 1000);
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
